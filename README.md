@@ -7,7 +7,7 @@
 [![YouTube](https://img.shields.io/badge/Demo-YouTube-red?style=flat-square)](https://www.youtube.com/watch?v=1ULi2VL8g1o)
 [![ICRA 2026](https://img.shields.io/badge/IEEE-ICRA%202026-blue?style=flat-square)](#)
 
- **Accepted to the 2026 IEEE International Conference on Robotics and Automation (ICRA)**
+[IEEE ICRA 26] This repository is the official code for GSAT: Geometric Traversability Estimation using Self-supervised Learning with Anomaly Detection for Diverse Terrains.
 
 **Dongjin Cho, Miryeong Park, Juhui Lee, Geonmo Yang, Younggun Cho**
 
