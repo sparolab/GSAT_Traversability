@@ -7,6 +7,8 @@
 [![YouTube](https://img.shields.io/badge/Demo-YouTube-red?style=flat-square)](https://www.youtube.com/watch?v=1ULi2VL8g1o)
 [![ICRA 2026](https://img.shields.io/badge/IEEE-ICRA%202026-blue?style=flat-square)](#)
 
+ **Accepted to the 2026 IEEE International Conference on Robotics and Automation (ICRA)**
+
 **Dongjin Cho, Miryeong Park, Juhui Lee, Geonmo Yang, Younggun Cho**
 
 [Spatial AI and Robotics Lab (SPARO)](https://sparolab.github.io/), Inha University
