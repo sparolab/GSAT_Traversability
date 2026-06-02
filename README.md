@@ -13,7 +13,7 @@
 
 [Spatial AI and Robotics Lab (SPARO)](https://sparolab.github.io/), Inha University
 
-<img src="assets/Thumnail.png" width="75%" />
+<img src="assets/Thumnail.png" width="60%" />
 
 </div>
 
@@ -25,9 +25,7 @@ GSAT learns robot-specific traversability from LiDAR point clouds — without hu
 
 <div align="center">
 
-<img src="assets/Mainframe.png" width="75%" />
-
-*Overview of the GSAT framework*
+<img src="assets/Mainframe.png" width="100%" />
 
 </div>
 
