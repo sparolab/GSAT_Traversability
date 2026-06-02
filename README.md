@@ -13,7 +13,7 @@
 
 [Spatial AI and Robotics Lab (SPARO)](https://sparolab.github.io/), Inha University
 
-<img src="assets/Figure1.png" width="75%" />
+<img src="assets/Thumnail.png" width="75%" />
 
 </div>
 
@@ -23,8 +23,15 @@
 
 GSAT learns robot-specific traversability from LiDAR point clouds — without human supervision. It builds a positive hypersphere in latent space using anomaly detection, addressing the positive-only learning problem.
 
----
+<div align="center">
 
+<img src="assets/Mainframe.png" width="75%" />
+
+*Overview of the GSAT framework*
+
+</div>
+
+---
 
 
 ## Getting Started
@@ -146,11 +153,11 @@ Two demos are available:
 
 <img src="assets/Anomaly_classification.gif" width="70%" />
 
-*Anomaly classification in traversability latent space*
+*Anomaly classification Demo*
 
-<img src="assets/Travel_Nav.gif" width="100%" />
+<img src="assets/Travel_Nav.gif" width="80%" />
 
-*Traversability-guided navigation*
+*Traversability-guided navigation Demo*
 
 </div>
 
