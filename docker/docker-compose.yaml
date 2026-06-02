@@ -1,0 +1,19 @@
+services:
+  gsat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: dev
+    image: dongjineee/gsat:00
+    container_name: gsat
+    stdin_open: true
+    tty: true
+    network_mode: "host"
+    volumes:
+      #--------[Mount whole repo as GSAT_Traversability so gsat(python) + gsat_ros(ROS) are both available]--------#
+      - ../:/root/gsat_ws/src/GSAT_Traversability
+      
+    environment:
+      - ROS_IP=127.0.0.1
+    command: "/bin/bash"
+    shm_size: 10g

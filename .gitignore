@@ -1,0 +1,62 @@
+# -------- Dataset & experiment outputs --------
+collect_data/
+
+# Model checkpoints
+*.pth
+*.pt
+checkpoint/
+checkpoints/
+runs/
+wandb/
+lightning_logs/
+*.png
+!assets/*.png
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+gsat/ops/*.so
+
+devel/
+build/
+install/
+.catkin_workspace
+logs/
+
+*.bag
+*.bag.active
+rosbag/
+
+# -------- IDE & OS --------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# -------- Docker / local GUI --------
+.docker.xauth
+*.log
+
+# -------- Local scratch / backup configs --------
+*copy.yaml
+* copy.yaml
+*.tmp
+*.bak

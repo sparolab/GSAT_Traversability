@@ -1,0 +1,16 @@
+gazebo_hill:
+  data_folder: "/root/gsat_ws/src/GSAT_Traversability/collect_data/gazebo/hill/original"
+  output_folder: "/root/gsat_ws/src/GSAT_Traversability/collect_data/gazebo/hill/process"
+  voxel_size: 0.05
+  filter_range: 1.5
+  per_pose_num: 50
+  level_points: true
+
+  footprint_points:
+    - [0.6, 0.5]
+    - [0.6, -0.5]
+    - [-0.6, -0.5]
+    - [-0.6, 0.5]
+
+  dedup_voxel_size_xy: [0.15, 0.15]
+  dedup_point_range: [-12.0, -12.0, 12.0, 12.0]

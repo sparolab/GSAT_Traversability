@@ -1,0 +1,7 @@
+gazebo_hill:
+  root_dir: "/root/gsat_ws/src/GSAT_Traversability/collect_data/gazebo/hill"
+  preprocess_dir: "process"
+  save_dir : "dataset"
+  train_ratio: 0.7
+  val_ratio: 0.25
+  test_ratio: 0.05

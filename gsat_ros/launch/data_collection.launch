@@ -1,0 +1,8 @@
+<launch>
+  <node name="data_sw_sync" pkg="gsat_ros" type="sw_sync" output="screen"/>
+
+  <node name="data_collection_node" pkg="gsat_ros" type="data_collection" output="screen">
+    <rosparam file="$(find gsat_ros)/config/data_collection.yaml" command="load"/>
+  </node>
+
+</launch>

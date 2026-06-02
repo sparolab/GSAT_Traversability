@@ -1,0 +1,20 @@
+## Dataset Configuration
+dataset_name: "gazebo_hill"
+
+##Dataset Example
+gazebo_hill:
+  output_dir: "/root/gsat_ws/src/GSAT_Traversability/collect_data/gazebo/hill/original"
+  
+  ##Data Collection Input Topic
+  lidar_topic: "filter/points"
+  odom_topic: "filter/odom"
+  cmd_vel_topic: "cmd_vel"
+
+  sampling_time: 0.3
+  queue_size: 10
+  max_interval_sec: 0.02
+
+  ## Traversability label (set use_pseudo_label: false to save Travel_label = 1)
+  use_pseudo_label: true
+  eta: 20.0
+  v_th: 0.2
