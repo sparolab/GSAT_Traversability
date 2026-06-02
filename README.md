@@ -151,7 +151,7 @@ Two demos are available:
 
 *Anomaly classification Demo*
 
-<img src="assets/Travel_Nav.gif" width="80%" />
+<img src="assets/nav.gif" width="80%" />
 
 *Traversability-guided navigation Demo*
 
