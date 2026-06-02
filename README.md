@@ -1,8 +1,6 @@
 <div align="center">
 
-# GSAT
-
-### Geometric Traversability Estimation using Self-supervised Learning with Anomaly Detection for Diverse Terrains
+# GSAT: Geometric Traversability Estimation using Self-supervised Learning with Anomaly Detection for Diverse Terrains
 
 [![Project](https://img.shields.io/badge/Project-Page-blue?style=flat-square)](https://sparolab.github.io/research/gsat/)
 [![arXiv](https://img.shields.io/badge/arXiv-2603.07480-b31b1b?style=flat-square)](https://arxiv.org/abs/2603.07480)
