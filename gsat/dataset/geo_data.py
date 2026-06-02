@@ -87,10 +87,6 @@ class Dataset(torch.utils.data.Dataset):
         return data_dict
 
     def get_item_for_viz(self, index):
-        """
-        For visualization: return both raw (before aug) and aug (after aug).
-        raw = point_range_filter only, aug = full augmentation (pitch/flip/rot, etc.).
-        """
         filename = self.point_data_infos[index]
         pts = load_bin(os.path.join(self.pts_dir, filename))
         label_pts = load_bin(os.path.join(self.label_dir, filename))

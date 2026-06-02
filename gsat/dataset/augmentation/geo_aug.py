@@ -69,11 +69,7 @@ def pitch_augment(
     return data_dict, True, None
 
 def flip_augment(data_dict, random_flip_ratio):
-    '''
-    data_dict: dict(pts, label_pts, gt_labels, gt_names, difficulty)
-    random_flip_ratio: float, 0-1
-    return: data_dict
-    '''
+
     random_flip_state = np.random.choice([True, False], p=[random_flip_ratio, 1-random_flip_ratio])
     if random_flip_state:
         pts, label_pts = data_dict['pts'], data_dict['label_pts']
@@ -86,10 +82,6 @@ def flip_augment(data_dict, random_flip_ratio):
     return data_dict
 
 def point_range_filter(data_dict, point_range, key):
-    '''
-    data_dict: dict(pts, gt_bboxes_3d, gt_labels, gt_names, difficulty)
-    point_range: [x1, y1, z1, x2, y2, z2]
-    '''
     pts = data_dict[key]
     x1,y1,z1,x2,y2,z2 = point_range
     keep = (
@@ -100,13 +92,6 @@ def point_range_filter(data_dict, point_range, key):
     return data_dict
 
 def global_rot_scale_trans(data_dict, rot_range, scale_ratio_range, translation_std):
-    '''
-    data_dict: dict(pts, gt_bboxes_3d, gt_labels, gt_names, difficulty)
-    rot_range: [a, b]
-    scale_ratio_range: [c, d] 
-    translation_std:  [e, f, g]
-    return: data_dict
-    '''
     pts, label_pts = data_dict['pts'], data_dict['label_pts']
     
     # 1. rotation
@@ -147,9 +132,6 @@ def global_rot_scale_trans(data_dict, rot_range, scale_ratio_range, translation_
     return data_dict
 
 def points_shuffle(data_dict):
-    '''
-    data_dict: dict(pts, gt_bboxes_3d, gt_labels, gt_names, difficulty)
-    '''
     pts = data_dict['pts']
     indices = np.arange(0, len(pts))
     np.random.shuffle(indices)

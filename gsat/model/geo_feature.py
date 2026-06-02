@@ -11,11 +11,6 @@ import matplotlib.pyplot as plt
 
 
 def visualize_feature_map_grid(feature_map, stage_name, start_channel=0, num_channels=16, num_cols=8):
-    """
-    feature_map: (B, C, H, W) - visualize batch 0 only
-    num_channels: number of channels to show (starting from start_channel)
-    num_cols: number of grid columns
-    """
     C = feature_map.shape[1]
     total_channels = min(num_channels, C - start_channel)
     if total_channels <= 0:
@@ -63,14 +58,6 @@ class PillarLayer(nn.Module):
 
     @torch.no_grad()
     def forward(self, batched_pts):
-        """
-        batched_pts: list[tensor], len(batched_pts) = bs
-
-        return:
-            pillars: (p1 + p2 + ... + pb, num_points, c)
-            coors_batch: (p1 + p2 + ... + pb, 1 + 3)
-            num_points_per_pillar: (p1 + p2 + ... + pb,)
-        """
         pillars, coors, npoints_per_pillar = [], [], []
 
         for i, pts in enumerate(batched_pts):
@@ -104,15 +91,6 @@ class PillarEncoder(nn.Module):
         self.bn = nn.BatchNorm1d(out_channel, eps=1e-3, momentum=0.01)
 
     def forward(self, pillars, coors_batch, npoints_per_pillar):
-        """
-        pillars: (Np, P, C), C=4 usually [x, y, z, intensity]
-        coors_batch: (Np, 4) = [batch_idx, x_idx, y_idx, z_idx]  # coordinate order should be verified
-        npoints_per_pillar: (Np,)
-
-        return:
-            batched_canvas: (bs, out_channel, y_l, x_l)
-            point_num_canvas: (bs, 1, y_l, x_l)
-        """
         device = pillars.device
         num_pillars, num_points, _ = pillars.shape
 
@@ -251,13 +229,6 @@ class ChannelScaleAttention2D(nn.Module):
         )
 
     def forward(self, x):
-        """
-        x: (B, C, H, W)
-        return:
-            out: (B, C, H, W)
-            ch_att: (B, C, 1, 1)
-            sc_att: (B, 1, 1, 1)
-        """
         b, c, _, _ = x.shape
         pooled = self.avg_pool(x).view(b, c)
 
@@ -307,12 +278,6 @@ class ChannelScaleAttentionNeck(nn.Module):
         )
 
     def forward(self, xs, return_attention=False):
-        """
-        xs: list of multi-scale features
-        returns:
-            fused_raw:  (B, sum(out_channels), H, W)
-            fused_relu: (B, fusion_out, H, W)
-        """
         outs = []
         att_info = []
 

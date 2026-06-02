@@ -1,18 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-data_preprocess.py
-- Generate train data
-- Save rotated point cloud
-- Save future supervision trajectory points
-- Augment each supervision pose with rectangular robot footprint
-- Reduce excessive supervision points by:
-    1) pose subsampling by distance
-    2) coarser footprint sampling
-    3) duplicate removal
-"""
-
 import argparse
 import os
 import sys
@@ -27,10 +15,6 @@ from GSAT_Traversability.gsat.data_tools.utils.io import load_bin
 
 
 def get_pose(translation, quaternion):
-    """
-    Build 4x4 transformation matrix from translation and quaternion.
-    quaternion: [x, y, z, w]
-    """
     r = R.from_quat(quaternion)
     rotation_matrix = r.as_matrix()
 
@@ -41,20 +25,12 @@ def get_pose(translation, quaternion):
 
 
 def pitch_roll_rotation_ma(q_xyzw):
-    """
-    Keep only roll/pitch rotation and remove yaw.
-    q_xyzw: [x, y, z, w]
-    """
     roll, pitch, yaw = R.from_quat(q_xyzw).as_euler("xyz", degrees=False)
     R_rp = R.from_euler("xyz", [roll, pitch, 0.0], degrees=False).as_matrix()
     return R_rp
 
 
 def transform_global2local(df_next, T_lidar2base=None):
-    """
-    Convert future global robot poses into local coordinates
-    relative to the first pose.
-    """
     if df_next.empty:
         return np.zeros((0, 3), dtype=np.float32)
 
@@ -80,12 +56,6 @@ def transform_global2local(df_next, T_lidar2base=None):
 
 
 def load_csv(file_path, time_stamp, save_trajectory_num, around_radius=0.0, filter_range=None):
-    """
-    Load future poses from supervision.csv and convert to local coordinates.
-
-    Returns:
-        (K,4) array: [x, y, z, travel_label]
-    """
     df = pd.read_csv(file_path)
 
     df_next = (
@@ -122,15 +92,6 @@ def load_csv(file_path, time_stamp, save_trajectory_num, around_radius=0.0, filt
 
 
 def subsample_pose_pts_by_distance(pose_pts, min_pose_gap=0.2):
-    """
-    Keep only poses separated by at least min_pose_gap in XY plane.
-
-    Args:
-        pose_pts: (K,4) -> [x, y, z, label]
-
-    Returns:
-        (M,4), M <= K
-    """
     if pose_pts.shape[0] == 0:
         return pose_pts.astype(np.float32)
 
@@ -147,10 +108,6 @@ def subsample_pose_pts_by_distance(pose_pts, min_pose_gap=0.2):
 
 
 def _compute_heading_from_trajectory(pose_pts, idx):
-    """
-    Estimate 2D heading vector from trajectory.
-    pose_pts: (K,4)
-    """
     K = pose_pts.shape[0]
 
     if K == 1:
@@ -176,20 +133,6 @@ def augment_pose_by_rect_footprint(
     longitudinal_res=0.2,
     unique_xy_round=2
 ):
-    """
-    Expand each pose center into a rectangular robot footprint.
-
-    Args:
-        pose_pts: (K,4) = [x, y, z, label]
-        robot_width: footprint width (left-right)
-        robot_length: footprint length (forward-backward)
-        lateral_res: sampling interval along width
-        longitudinal_res: sampling interval along length
-        unique_xy_round: round xy for deduplication (None to disable)
-
-    Returns:
-        (N,4) = [x, y, z, label]
-    """
     if pose_pts.shape[0] == 0:
         return np.empty((0, 4), dtype=np.float32)
 
@@ -229,8 +172,7 @@ def augment_pose_by_rect_footprint(
     return aug_points
 
 
-def _footprint_from_points(footprint_points):
-    """Extract width(lateral), length(longitudinal) from footprint_points [[x,y],...]."""
+def _footprint_from_points(footprint_points):   
     if not footprint_points or len(footprint_points) < 2:
         return 1.0, 1.2
     pts = np.array(footprint_points)

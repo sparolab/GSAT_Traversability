@@ -57,7 +57,6 @@ if __name__ == '__main__':
     with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
 
-    #--------[Print an English message and exit if the requested key is missing]--------#
     if args.key not in config:
         print(f"[Error] config key '{args.key}' not found in {args.config}.")
         sys.exit(1)
