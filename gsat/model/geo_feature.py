@@ -77,7 +77,7 @@ class PillarEncoder(nn.Module):
 
         z = pillars[:, :, 2]  # (N_pillars, N_points)
 
-        valid_mask = (z != 0) & (z >= -2.0) & (z <= 2.0)
+        valid_mask = (z != 0)
         z_masked = z.masked_fill(~valid_mask, float('nan'))  # (N_pillars, N_points)
         z_mean = torch.nanmean(z_masked, dim=1, keepdim=True)  # (N_pillars, 1)
 

@@ -48,9 +48,9 @@ def points_to_voxel_grid(batched_label_pts, point_cloud_range, voxel_size, max_n
                 
     return voxel_grid
 
-def center_extract(data_loader, gsat_feature, gsat_head, device, point_range, voxel_size, latent_dim, eps=0.1):
+def center_extract(data_loader, gsat_feature, gsat_head, device, point_range, voxel_size, eps=0.1):
     n_samples = 0
-    c = torch.zeros(latent_dim, device=device)
+    c = None
 
     gsat_feature.eval()
     gsat_head.eval()
@@ -80,12 +80,19 @@ def center_extract(data_loader, gsat_feature, gsat_head, device, point_range, vo
                     mode='nearest'
                 )
 
+            latent_dim = latent_space.shape[1]
+            if c is None:
+                c = torch.zeros(latent_dim, device=device)
+
             z_flat = latent_space.permute(0, 2, 3, 1).reshape(-1, latent_dim)
             mask = travel_input_train.view(-1) != -1
             z_pos = z_flat[mask]
 
             n_samples += z_pos.size(0)
             c += z_pos.sum(dim=0)
+
+    if n_samples == 0:
+        raise ValueError("No positive samples were found while extracting the hypersphere center.")
 
     c /= n_samples
     return c

@@ -90,7 +90,7 @@ def main(args):
             with torch.no_grad():
                 center_c = center_extract(
                     train_loader, geo_feautre, head_model, device,
-                    args.point_range, args.voxel_size, latent_dim=16
+                    args.point_range, args.voxel_size
                 )
         mean_radius_train = radius_extract(geo_feautre, head_model, train_loader, args.point_range, args.voxel_size, center_c, device='cuda')
 
