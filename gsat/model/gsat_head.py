@@ -79,10 +79,10 @@ class MLPAutoEncoder(nn.Module):
 class gsat_head(nn.Module):
     def __init__(self):
         super().__init__()
-        self.s_96_64_32_16 = MLPAutoEncoder(input_dim=96, hidden_dims_enc=[64,32],bottle_neck_dim=16,
-                                    hidden_dims_dec=[32,64],recon_out_dim=96)
+        self.s_32_16_8 = MLPAutoEncoder(input_dim=32, hidden_dims_enc=[16],bottle_neck_dim=8,
+                                    hidden_dims_dec=[16],recon_out_dim=32)
     def forward(self, feature_map):
-        latent_space, recon_out, trave_out = self.s_96_64_32_16(feature_map)
+        latent_space, recon_out, trave_out = self.s_32_16_8(feature_map)
 
         recon_input = feature_map
         return latent_space, recon_out, recon_input, trave_out
