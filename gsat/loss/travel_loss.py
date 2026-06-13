@@ -33,7 +33,8 @@ class loss_gsat(nn.Module): ##unlabeled-anomlay push, unlabeled-normal pull, reg
         distance_batch[mask_pos].mean()
         if mask_pos.any() else torch.tensor(0.0, device=device)
         )
-        thr = pos_metric_loss.detach()
+        
+        thr = radius
 
         mask_anom_full = mask_unl & (distance_batch > thr)
         mask_nom_full  = mask_unl & (distance_batch < thr)

@@ -9,3 +9,16 @@ gazebo_hill:
   point_range : [-9, -9, -2, 9, 9, 2]
   voxel_size : [0.15, 0.15, 4]
   max_num_points : 32
+
+rellis:
+  dataset_dir: "/root/gsat_ws/src/GSAT_Traversability/collect_data/rellis/dataset_base_seq0"
+  save_dir : "/root/gsat_ws/src/GSAT_Traversability/collect_data/rellis/checkpoint1"
+  batch_size : 2
+  num_workers : 4
+  init_lr : 0.0005
+  max_epoch : 100
+  checkpoint_freq_epoch : 20
+  point_range : [-12, -12, -2, 12, 12, 2]
+
+  voxel_size : [0.15, 0.15, 4]
+  max_num_points : 32

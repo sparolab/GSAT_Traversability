@@ -160,7 +160,6 @@ def main(args):
             val_pos_metric_sum = 0.0
             val_unl_norm_metric_sum = 0.0
             val_unl_abnorm_metric_sum = 0.0
-            mean_radius_val = radius_extract(geo_feautre, head_model, val_loader, args.point_range, args.voxel_size, center_c, device='cuda')
 
             with torch.no_grad():
                 for data in tqdm(val_loader, desc=f"Val {epoch+1}/{args.max_epoch}"):
@@ -184,9 +183,8 @@ def main(args):
 
                     loss, loss_met, loss_reg, loss_rec, pos_met, un_no_met, un_ab_met = gsat_loss(
                         travel_input_val, latent_space_val, center_c,
-                        travel_out_val, recon_out_val, fmap_val, epoch, mean_radius_val
+                        travel_out_val, recon_out_val, fmap_val, epoch, mean_radius_train
                     )
-
                     val_loss_sum += loss.item()
                     val_metric_loss_sum += loss_met.item()
                     val_reg_loss_sum += loss_reg.item()
@@ -212,33 +210,25 @@ def main(args):
                 f"Recon: {avg_val_recon_loss:.4f}")
 
             if (epoch + 1) % args.ckpt_freq_epoch == 0:
-                mean_radius_val = radius_extract(
-                    geo_feautre, head_model, val_loader,
-                    args.point_range, args.voxel_size, center_c, device='cuda'
-                )
                 torch.save({
                     "epoch": epoch+1,
                     "feature_model" : geo_feautre.state_dict(),
                     "head_model": head_model.state_dict(),
                     "center_c": center_c.cpu(),
-                    "mean_radius_val": mean_radius_val,
+                    "mean_radius_val": mean_radius_train,
                     "all_pos_metric_loss": avg_pos_metric_loss_val,
                     "all_unlabel_norm_metric_loss": avg_unl_norm_metric_loss_val,
                     "all_unlabel_abnorm_metric_loss": avg_unl_abnorm_metric_loss_val
                 }, os.path.join(args.saved_path, f"epoch_{epoch+1}.pth"))
 
             if avg_val_loss < best_val_loss:
-                mean_radius_val = radius_extract(
-                    geo_feautre, head_model, val_loader,
-                    args.point_range, args.voxel_size, center_c, device='cuda'
-                )
                 best_val_loss = avg_val_loss
                 torch.save({
                     "epoch": epoch+1,
                     "feature_model" : geo_feautre.state_dict(),
                     "head_model": head_model.state_dict(),
                     "center_c": center_c.cpu(),
-                    "mean_radius_val": mean_radius_val,
+                    "mean_radius_val": mean_radius_train,
                     "all_pos_metric_loss": avg_pos_metric_loss_val,
                     "all_unlabel_norm_metric_loss": avg_unl_norm_metric_loss_val,
                     "all_unlabel_abnorm_metric_loss": avg_unl_abnorm_metric_loss_val

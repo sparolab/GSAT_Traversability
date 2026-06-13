@@ -1,0 +1,8 @@
+checkpoint_path: "/root/gsat_ws/src/GSAT_Traversability/collect_data/rellis/checkpoint1/best_model_43.pth"
+input_folder: "/root/gsat_ws/src/GSAT_Traversability/collect_data/rellis/dataset_base_seq0/val/point"
+
+point_range: [-12, -12, -2, 12, 12, 2]
+voxel_size: [0.15, 0.15, 4]
+
+threshold_scale: 1.0
+vis_point_size: 2.0
