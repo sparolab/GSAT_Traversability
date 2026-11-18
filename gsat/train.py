@@ -15,7 +15,7 @@ from GSAT_Traversability.gsat.scheduler import CosineAnnealingWarmupRestarts
 
 
 def main(args):
-    setup_seed(42)
+    setup_seed(args.seed)
     train_dataset = Dataset(
         data_root=args.dataset_dir,
         split='train',
@@ -38,29 +38,29 @@ def main(args):
         dataset=val_dataset,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
-        # shuffle=False,
         shuffle=True,
         drop_last=True
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
+
     geo_feautre = geo_feature(
         voxel_size=args.voxel_size,
         point_cloud_range=args.point_range,
     ).to(device)
-        
-    for p in geo_feautre.parameters():  
+
+    for p in geo_feautre.parameters():
         p.requires_grad = True
 
-    head_model = gsat_head().to(device)    
-    optimizer = optim.AdamW(
+    head_model = gsat_head().to(device)
+    optimizer = optim.Adam(
         list(geo_feautre.parameters()) + list(head_model.parameters()),
         lr=args.init_lr,
         weight_decay=1e-5
     )
 
     gsat_loss = loss_gsat()
+    print(f"radius momentum: {args.radius_momentum}, seed: {args.seed}")
 
     train_steps_per_epoch = len(train_loader)
     total_steps = train_steps_per_epoch * args.max_epoch
@@ -77,13 +77,12 @@ def main(args):
     center_c = None
     os.makedirs(args.saved_path, exist_ok=True)
     best_val_loss = float('inf')
-    mean_radius_train = 0
-    mean_radius_val = 0
+    mean_radius_train = None
 
     for epoch in range(args.max_epoch):
         print(f"\n===== Epoch {epoch+1}/{args.max_epoch} =====")
-        print(f"--> Epoch {epoch+1}")
 
+        # Hypersphere center: mean positive latent over the train set, updated every 5 epochs (Eq. 8)
         if epoch % 5 == 0:
             geo_feautre.eval()
             head_model.eval()
@@ -92,7 +91,15 @@ def main(args):
                     train_loader, geo_feautre, head_model, device,
                     args.point_range, args.voxel_size
                 )
-        mean_radius_train = radius_extract(geo_feautre, head_model, train_loader, args.point_range, args.voxel_size, center_c, device='cuda')
+
+        # Hypersphere radius: EMA of the mean positive distance over the train set (Eq. 9)
+        radius_raw = radius_extract(geo_feautre, head_model, train_loader, args.point_range, args.voxel_size, center_c, device='cuda')
+        if mean_radius_train is None:
+            mean_radius_train = radius_raw
+        else:
+            m = args.radius_momentum
+            mean_radius_train = m * mean_radius_train + (1.0 - m) * radius_raw
+        print(f"radius raw: {radius_raw:.4f}, ema: {mean_radius_train:.4f}")
 
         geo_feautre.train()
         head_model.train()
@@ -101,11 +108,6 @@ def main(args):
         train_metric_loss_sum = 0.0
         train_reg_loss_sum = 0.0
         train_recon_loss_sum = 0.0
-        train_pos_metric_sum = 0.0
-        train_unl_norm_metric_sum = 0.0
-        train_unl_abnorm_metric_sum = 0.0
-
-        num_batches = len(train_loader)
 
         for batch_idx, data in enumerate(tqdm(train_loader, desc=f"{epoch+1}/{args.max_epoch}")):
             pts, gt_pts = data["batched_pts"], data["batched_label_pts"]
@@ -125,7 +127,8 @@ def main(args):
 
             loss, loss_met, loss_reg, loss_rec, pos_met, un_no_met, un_ab_met = gsat_loss(
                 train_reg_in, latent_space, center_c,
-                train_trave_out, recon_out, fmap, epoch, mean_radius_train
+                train_trave_out, recon_out, recon_in,
+                epoch, mean_radius_train
             )
 
             optimizer.zero_grad()
@@ -137,16 +140,8 @@ def main(args):
             train_metric_loss_sum += loss_met.item()
             train_reg_loss_sum += loss_reg.item()
             train_recon_loss_sum += loss_rec.item()
-            train_pos_metric_sum += pos_met.item()
-            train_unl_norm_metric_sum += un_no_met.item()
-            train_unl_abnorm_metric_sum += un_ab_met.item()
 
-            avg_train_loss = train_loss_sum / (batch_idx + 1)
-            avg_train_metric_loss = train_metric_loss_sum / (batch_idx + 1)
-            avg_train_reg_loss = train_reg_loss_sum / (batch_idx + 1)
-            avg_train_recon_loss = train_recon_loss_sum / (batch_idx + 1)
-
-
+        # Validate on odd epochs (1, 3, 5, ...)
         do_val = (epoch + 1) % 2 == 1
 
         if do_val:
@@ -163,7 +158,6 @@ def main(args):
 
             with torch.no_grad():
                 for data in tqdm(val_loader, desc=f"Val {epoch+1}/{args.max_epoch}"):
-                    
                     pts, gt_pts = data["batched_pts"], data["batched_label_pts"]
                     pts = [p.to(device) for p in pts]
                     gt_pts = [g.to(device) for g in gt_pts]
@@ -179,11 +173,10 @@ def main(args):
                         max_voxels=(16000, 40000)
                     )
 
-                    mean_radius_val = None
-
                     loss, loss_met, loss_reg, loss_rec, pos_met, un_no_met, un_ab_met = gsat_loss(
                         travel_input_val, latent_space_val, center_c,
-                        travel_out_val, recon_out_val, fmap_val, epoch, mean_radius_train
+                        travel_out_val, recon_out_val, recon_in_val,
+                        epoch, mean_radius_train
                     )
                     val_loss_sum += loss.item()
                     val_metric_loss_sum += loss_met.item()
@@ -209,46 +202,43 @@ def main(args):
                 f"Reg: {avg_val_reg_loss:.4f} "
                 f"Recon: {avg_val_recon_loss:.4f}")
 
-            if (epoch + 1) % args.ckpt_freq_epoch == 0:
-                torch.save({
-                    "epoch": epoch+1,
-                    "feature_model" : geo_feautre.state_dict(),
-                    "head_model": head_model.state_dict(),
-                    "center_c": center_c.cpu(),
-                    "mean_radius_val": mean_radius_train,
-                    "all_pos_metric_loss": avg_pos_metric_loss_val,
-                    "all_unlabel_norm_metric_loss": avg_unl_norm_metric_loss_val,
-                    "all_unlabel_abnorm_metric_loss": avg_unl_abnorm_metric_loss_val
-                }, os.path.join(args.saved_path, f"epoch_{epoch+1}.pth"))
+        ckpt = {
+            "epoch": epoch+1,
+            "feature_model" : geo_feautre.state_dict(),
+            "head_model": head_model.state_dict(),
+            "center_c": center_c.cpu(),
+            "mean_radius_val": mean_radius_train,   # classification threshold used at inference
+            "train_cfg": dict(vars(args)),
+        }
+        if do_val:
+            ckpt.update({
+                "all_pos_metric_loss": avg_pos_metric_loss_val,
+                "all_unlabel_norm_metric_loss": avg_unl_norm_metric_loss_val,
+                "all_unlabel_abnorm_metric_loss": avg_unl_abnorm_metric_loss_val,
+            })
 
-            if avg_val_loss < best_val_loss:
-                best_val_loss = avg_val_loss
-                torch.save({
-                    "epoch": epoch+1,
-                    "feature_model" : geo_feautre.state_dict(),
-                    "head_model": head_model.state_dict(),
-                    "center_c": center_c.cpu(),
-                    "mean_radius_val": mean_radius_train,
-                    "all_pos_metric_loss": avg_pos_metric_loss_val,
-                    "all_unlabel_norm_metric_loss": avg_unl_norm_metric_loss_val,
-                    "all_unlabel_abnorm_metric_loss": avg_unl_abnorm_metric_loss_val
-                }, os.path.join(args.saved_path, f"best_model_{epoch+1}.pth"))
-                print(f" New best! Validation Loss {best_val_loss:.4f} ▶ save: best_model")
+        # Periodic checkpoint, saved whether or not this epoch was validated
+        if (epoch + 1) % args.ckpt_freq_epoch == 0:
+            torch.save(ckpt, os.path.join(args.saved_path, f"epoch_{epoch+1}.pth"))
+
+        if do_val and avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            torch.save(ckpt, os.path.join(args.saved_path, f"best_model_{epoch+1}.pth"))
+            print(f" New best! Validation Loss {best_val_loss:.4f} ▶ save: best_model")
 
     print("===== Training complete! =====")
 
 if __name__ == '__main__':
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='./config/train.yaml')
-    parser.add_argument('--key', type=str, default='hill_example',
-                        help='top-level config key to use (e.g. hill_example)')
+    parser.add_argument('--key', type=str, default='gazebo_hill',
+                        help='top-level config key to use (gazebo_hill, rellis)')
     args = parser.parse_args()
 
     with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
 
-    #--------[Print an English message and exit if the requested key is missing]--------#
     if args.key not in config:
         print(f"[Error] config key '{args.key}' not found in {args.config}.")
         sys.exit(1)
@@ -264,8 +254,10 @@ if __name__ == '__main__':
     args.point_range = cfg.get("point_range")
     args.voxel_size = cfg.get("voxel_size")
     args.max_num_points = cfg.get("max_num_points")
+    args.radius_momentum = cfg.get("radius_momentum", 0.5)   # epsilon in Eq. 9
+    args.seed = cfg.get("seed", 42)
 
     print(args.dataset_dir)
-    print(args.saved_path)                 
+    print(args.saved_path)
 
-    main(args)   
+    main(args)

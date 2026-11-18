@@ -126,6 +126,20 @@ collect_data/gazebo/hill/dataset/
 └── test/   point/  label/
 ```
 
+#### RELLIS-3D
+
+The RELLIS-3D training split and the evaluation ground truth used in the paper are not distributed with this repository. Please contact the authors if you need them.
+
+The RELLIS-3D split (`dataset_pose_r005_arfil0_sampling`) stores one label per robot pose (center line).
+Expand the labels to the Warthog footprint before training (points are copied, the input folder is not modified):
+
+```bash
+cd ~/gsat_ws/src/GSAT_Traversability/gsat/data_tools
+python3 rebuild_footprint_labels.py --key rellis
+```
+
+The output folder (`dataset_pose_r005_arfil0_sampling_fp`) is the `dataset_dir` of the `rellis` key in `gsat/config/train.yaml`.
+
 ---
 
 ### 3. Training
@@ -138,6 +152,30 @@ python3 train.py --key {data_name}
 ```
 
 Checkpoints are saved as `epoch_*.pth` and `best_model_*.pth` under `save_dir`.
+
+---
+
+### 4. Quantitative Evaluation
+
+`quantitative_eval.py` compares the predicted traversability with semantic ground truth on the BEV grid.
+
+**Ground truth.** A folder of `.ply` files, one per scan, with vertex fields `x, y, z, intensity, label`. Points whose `label` is in `traversable_ids` are traversable. Each BEV cell is
+- traversable (1) if all of its points are traversable,
+- non-traversable (0) if at least one of its points is not,
+- ignored if it has no points.
+
+**Prediction.** The trained model runs on the same scan. A cell is predicted traversable when the distance of its latent vector to the hypersphere center is within the radius saved in the checkpoint (`mean_radius_val`).
+
+**Metrics.** Precision, recall, F1, IoU and AUROC (score = negative distance) are computed per file and averaged over files; these are the numbers reported in the paper. Micro averages over all cells are printed as well.
+
+**Run.** Set `checkpoint_path` and `sem_folder` in `gsat/config/quantitative_eval.yaml` (`point_range` and `voxel_size` must match `train.yaml`), then run:
+
+```bash
+cd ~/gsat_ws/src/GSAT_Traversability/gsat
+python3 quantitative_eval.py --checkpoint {save_dir}/best_model_XX.pth
+```
+
+Use the last `best_model_*.pth` in `save_dir` (highest epoch = lowest validation loss). Set `visualize_bev` or `visualize_3d` to `true` to inspect each file.
 
 ---
 

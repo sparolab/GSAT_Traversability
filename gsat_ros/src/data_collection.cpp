@@ -186,7 +186,7 @@ private:
     if (std::abs(command_vel_.linear.x) < 1e-6)
       return;
 
-    //--------[Pseudo label from cmd_vel vs odom, or fixed 1.0]--------#
+    // Pseudo label from cmd_vel vs odom, or fixed 1.0
     const double travel_label = use_pseudo_label_
         ? convert_label_trac_image(pre_pose_, cur_pose_, command_vel_, dt, eta_, v_th_)
         : 1.0;

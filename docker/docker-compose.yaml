@@ -10,7 +10,7 @@ services:
     tty: true
     network_mode: "host"
     volumes:
-      #--------[Mount whole repo as GSAT_Traversability so gsat(python) + gsat_ros(ROS) are both available]--------#
+      # Mount the whole repo as GSAT_Traversability so both gsat (Python) and gsat_ros (ROS) are available
       - ../:/root/gsat_ws/src/GSAT_Traversability
       
     environment:

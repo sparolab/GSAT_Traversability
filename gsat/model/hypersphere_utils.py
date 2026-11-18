@@ -32,7 +32,8 @@ def points_to_voxel_grid(batched_label_pts, point_cloud_range, voxel_size, max_n
     grid_y = int((point_cloud_range[4] - point_cloud_range[1]) / voxel_size[1])
     bs = len(batched_label_pts)
 
-    voxel_grid = torch.full((bs, 1, grid_y, grid_x), fill_value=-1, device=device)
+    # float grid: an integer fill value would make it int64 and truncate fractional labels
+    voxel_grid = torch.full((bs, 1, grid_y, grid_x), fill_value=-1.0, device=device)
 
     for i in range(bs):
         mask = (coors_batch[:, 0] == i)
@@ -55,8 +56,6 @@ def center_extract(data_loader, gsat_feature, gsat_head, device, point_range, vo
     gsat_feature.eval()
     gsat_head.eval()
 
-    debug_n = 0
-    max_debug_batches = 3
     with torch.no_grad():
         for data_idx, data_dict in enumerate(tqdm(data_loader, desc="hyper_center")):
             batched_pts = [pt.to(device) for pt in data_dict["batched_pts"]]
@@ -98,9 +97,9 @@ def center_extract(data_loader, gsat_feature, gsat_head, device, point_range, vo
     return c
 
 
-def radius_extract(gsat_feature, gtis_head_model, data_loader, point_range, voxel_size, center_c, device):
+def radius_extract(gsat_feature, gsat_head, data_loader, point_range, voxel_size, center_c, device):
     gsat_feature.eval()
-    gtis_head_model.eval()
+    gsat_head.eval()
     all_distances = []
 
     with torch.no_grad():
@@ -109,7 +108,7 @@ def radius_extract(gsat_feature, gtis_head_model, data_loader, point_range, voxe
             batched_label_pts = [pt.to(device) for pt in data_dict["batched_label_pts"]]
 
             feature_map, _, feature_map_layer  = gsat_feature(batched_pts)
-            latent_space, _, _, _ = gtis_head_model(feature_map_layer)
+            latent_space, _, _, _ = gsat_head(feature_map_layer)
 
             travel_input = points_to_voxel_grid(
                 batched_label_pts=batched_label_pts,

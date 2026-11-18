@@ -60,11 +60,6 @@ class _Voxelization(torch.autograd.Function):
         voxels_out = voxels[:voxel_num]
         coors_out = coors[:voxel_num].flip(-1) # (z, y, x) -> (x, y, z)
         num_points_per_voxel_out = num_points_per_voxel[:voxel_num]
-        # print(f"🔹 Total Voxels Created: {coors_out.shape[0]}")
-        # print(f"🔹 First 10 Voxel Coordinates: \n {coors_out[:10]}")
-        # print(f"🔹 Total points in pillar: {voxels_out.shape[0]}")
-        # print(f"🔹 First 10 Voxel Insert: \n {voxels_out[:10]}")
-        # print(f"🔹 voxel_num: \n {voxel_num}")
         return voxels_out, coors_out, num_points_per_voxel_out
 
 
@@ -108,11 +103,9 @@ class Voxelization(nn.Module):
         voxel_size = torch.tensor(voxel_size, dtype=torch.float32)
         grid_size = (point_cloud_range[3:] -
                      point_cloud_range[:3]) / voxel_size
-        # print(f"grid_size : {grid_size}")
         grid_size = torch.round(grid_size).long()
         input_feat_shape = grid_size[:2]
         self.grid_size = grid_size
-        # print(f"🔹 self.grid_size: {self.grid_size}")
         # the origin shape is as [x-len, y-len, z-len]
         # [w, h, d] -> [d, h, w]
         self.pcd_shape = [*input_feat_shape, 1][::-1]

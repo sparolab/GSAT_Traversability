@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 from .utils.io import load_bin
-from .augmentation.geo_aug import data_augment
+from .augmentation.geo_aug import data_augment, point_range_filter
 from .visualization.utils import visualize_pts_label_bev_with_grid
 
 class Dataset(torch.utils.data.Dataset):
@@ -37,7 +37,7 @@ class Dataset(torch.utils.data.Dataset):
             random_flip_ratio=0.5,
             pitch_flag=True,
             global_rot_scale_trans=dict(
-                rot_range=[-np.pi / 3, np.pi / 3],
+                rot_range=[-np.pi / 2, np.pi / 2],   # random yaw in [-90, 90] deg
                 scale_ratio_range=[1.0, 1.0],
                 translation_std=[0.0, 0.0, 0.0],
             ),
@@ -57,27 +57,18 @@ class Dataset(torch.utils.data.Dataset):
         pts = torch.from_numpy(pts).float()
         label_pts = torch.from_numpy(label_pts).float()
 
-        # visualize_pts_label_bev_with_grid(
-        #     pts, label_pts,
-        #     point_cloud_range=[-9, -9, -2, 9, 9, 2],
-        #     voxel_size_xy=(0.15, 0.15),
-        #     grid_every=1
-        # )
-
         data_dict = {
             'pts': pts,
             'label_pts': label_pts,
             'filename': filename,
         }
-        # if self.aug and self.split == 'train':
-        #     data_dict = data_augment(self.data_root, data_dict, self.data_aug_config)
 
-        #     if isinstance(data_dict['pts'], np.ndarray):
-        #         data_dict['pts'] = torch.from_numpy(data_dict['pts']).float()
-        #     if isinstance(data_dict['label_pts'], np.ndarray):
-        #         data_dict['label_pts'] = torch.from_numpy(data_dict['label_pts']).float()
-
-        data_dict = data_augment(self.data_root, data_dict, self.data_aug_config)
+        if self.aug:
+            data_dict = data_augment(self.data_root, data_dict, self.data_aug_config)
+        else:
+            # No augmentation: only the point range filters that data_augment also applies
+            data_dict = point_range_filter(data_dict, self.data_aug_config['point_range_filter'], "pts")
+            data_dict = point_range_filter(data_dict, self.data_aug_config['label_point_range_filter'], "label_pts")
 
         if isinstance(data_dict['pts'], np.ndarray):
             data_dict['pts'] = torch.from_numpy(data_dict['pts']).float()
@@ -94,7 +85,6 @@ class Dataset(torch.utils.data.Dataset):
         label_pts = torch.from_numpy(label_pts).float()
 
         data_dict = {"pts": pts, "label_pts": label_pts, "filename": filename}
-        from .augmentation.geo_aug import point_range_filter
 
         pr_pts = self.data_aug_config["point_range_filter"]
         pr_lbl = self.data_aug_config["label_point_range_filter"]

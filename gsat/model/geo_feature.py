@@ -62,7 +62,7 @@ class PillarEncoder(nn.Module):
         npoints_per_pillar: (p1 + p2 + ... + pb, )
         return:  
             - batched_canvas: (bs, out_channel, y_l, x_l)
-            - point_num_canvas: (bs, 1, y_l, x_l)  # 
+            - point_num_canvas: (bs, 1, y_l, x_l)
         '''
         device = pillars.device
 
@@ -73,8 +73,7 @@ class PillarEncoder(nn.Module):
         x_offset_pi_center = pillars[:, :, :1] - (coors_batch[:, None, 1:2] * self.vx + self.x_offset)
         y_offset_pi_center = pillars[:, :, 1:2] - (coors_batch[:, None, 2:3] * self.vy + self.y_offset)
 
-        #===================add===================#
-
+        # 3. per-pillar z standard deviation (padded points have z == 0 and are ignored)
         z = pillars[:, :, 2]  # (N_pillars, N_points)
 
         valid_mask = (z != 0)
@@ -89,12 +88,11 @@ class PillarEncoder(nn.Module):
 
         z_3std_expanded = 3 * z_std_expanded
 
-        ##real_eval_original_set, 3var## 
+        # 7 features: x, y offsets to the pillar center, z, offsets to the point center (3), 3 * z std
         features = torch.cat([pillars[:, :, :3], offset_pt_center, z_3std_expanded], dim=-1)
-        ##################
 
-        features[:, :, 0:1] = x_offset_pi_center  # tmp, x -> x-x_mean
-        features[:, :, 1:2] = y_offset_pi_center  # tmp, y -> y-y_mean
+        features[:, :, 0:1] = x_offset_pi_center
+        features[:, :, 1:2] = y_offset_pi_center
 
         # 4. find mask for (0, 0, 0) and update the encoded features
         voxel_ids = torch.arange(0, pillars.size(1)).to(device)
@@ -185,7 +183,7 @@ class Neck(nn.Module):
         out = self.decoder_block(x)
         out_bn = self.neck_batch(out)
         out_relu = self.neck_relu(out_bn)
-        return out, out_relu
+        return out, out_bn, out_relu
     
 class geo_feature(nn.Module):
     def __init__(self,    
@@ -193,7 +191,7 @@ class geo_feature(nn.Module):
                 point_cloud_range=[-12, -12, -2, 12, 12, 2],
                  max_num_points=32,
                  max_voxels=(16000, 40000)):
-        
+
         super().__init__()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.pillar_layer = PillarLayer(voxel_size=voxel_size, 
@@ -201,7 +199,6 @@ class geo_feature(nn.Module):
                                         max_num_points=max_num_points, 
                                         max_voxels=max_voxels)
 
-        ##################encoder - output 16##################
         self.pillar_encoder = PillarEncoder(voxel_size=voxel_size, 
                                             point_cloud_range=point_cloud_range, 
                                             in_channel=7,
@@ -214,7 +211,6 @@ class geo_feature(nn.Module):
         self.neck = Neck(in_channel=16, 
                     out_channel=32, 
                     upsample_stride=1)
-        ######################################################
 
         self.upsample_layer = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
 
@@ -223,8 +219,10 @@ class geo_feature(nn.Module):
 
         pillar_features, pillars_num = self.pillar_encoder(pillars, coors_batch, npoints_per_pillar)
         xs = self.backbone(pillar_features)
-        x, x_out = self.neck(xs)
-        fmap_relu = self.upsample_layer(x_out)
-        fmap = self.upsample_layer(x)
+        x_raw, x_bn, x_relu = self.neck(xs)
 
-        return fmap, pillars_num, fmap_relu
+        # The 3rd output (after BN, before ReLU, so negative values are kept) goes into gsat_head
+        # and is also its reconstruction target.
+        fmap_relu = self.upsample_layer(x_relu)
+        fmap_pre_relu = self.upsample_layer(x_bn)
+        return fmap_relu, pillars_num, fmap_pre_relu

@@ -31,7 +31,8 @@ def bev_representation(batched_pts, point_cloud_range, voxel_size, max_num_point
     grid_y = int((point_cloud_range[4] - point_cloud_range[1]) / voxel_size[1])
     bs = len(batched_pts)
 
-    voxel_grid = torch.full((bs, 1, grid_y, grid_x), fill_value=-1, device=device)
+    # float grid: an integer fill value would make it int64 and truncate fractional labels
+    voxel_grid = torch.full((bs, 1, grid_y, grid_x), fill_value=-1.0, device=device)
 
     for i in range(bs):
         mask = (coors_batch[:, 0] == i)

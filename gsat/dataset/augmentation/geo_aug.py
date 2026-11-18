@@ -1,18 +1,18 @@
 import torch
 import numpy as np
 
-from .geo_feature import ransac_plan_extract, plane_angle_extract, Rx, Ry
+from .geo_feature import ransac_plan_extract, plane_angle_extract, Ry
 
 def pitch_augment(
     data_dict,
     flag,
     ransac_n_iter: int = 1200,
-    ransac_dist: float = 0.013,
-    ransac_min_inliers: int = 400,
+    ransac_dist: float = 0.05,          # ground-plane inlier distance (m)
+    ransac_min_inliers: int = 600,      # inliers counted in a 5000-point subsample
     ransac_min_nz: float = 0.75,
     plane_dist_thresh: float = 0.07,
     above_plane_h: float = 0.20,
-    uniform_pitch_between_minus_and_plus: bool = True, 
+    uniform_pitch_between_minus_and_plus: bool = True,
     visualize: bool = False
 ):
     if not flag:
@@ -51,18 +51,18 @@ def pitch_augment(
     a, b, c = abc
     pitch_rad, roll_rad, _, _ = plane_angle_extract(a, b)
 
-    R_roll = Rx(-roll_rad)
-
     original_pitch = pitch_rad
     target_pitch   = -original_pitch
     u = torch.rand((), device=device, dtype=dtype, generator=gen)
-    final_pitch  = (1.0 - 0.9) * original_pitch + u * target_pitch
+    # Final ground pitch uniform in [-orig, +orig]: a +5 deg slope becomes anything in [-5, +5] deg
+    final_pitch  = (1.0 - u) * original_pitch + u * target_pitch
     delta_pitch  = final_pitch - original_pitch
-    R_pitch = Ry(delta_pitch)
-    R_total = R_pitch
+    R_total = Ry(delta_pitch)
 
+    # Row-vector points -> multiply by R^T so the plane rotates by +delta_pitch.
+    # Only the points are rotated (f_g = R_y p); the supervision labels stay as they are.
     pts_rot = pts.clone()
-    pts_rot[:, :3] = pts_rot[:, :3] @ R_total
+    pts_rot[:, :3] = pts_rot[:, :3] @ R_total.T
 
     data_dict['pts'] = pts_rot
     data_dict['label_pts'] = label_pts
@@ -97,7 +97,6 @@ def global_rot_scale_trans(data_dict, rot_range, scale_ratio_range, translation_
     # 1. rotation
     rot_angle = np.random.uniform(rot_range[0], rot_range[1])
     rot_cos, rot_sin = np.cos(rot_angle), np.sin(rot_angle)
-    # in fact, - rot_angle
     rot_mat = np.array([[rot_cos, rot_sin], 
                         [-rot_sin, rot_cos]]) # (2, 2)
     
@@ -115,17 +114,6 @@ def global_rot_scale_trans(data_dict, rot_range, scale_ratio_range, translation_
     trans_factor[0, 2] = 0.0
     label_pts[:, :3] += trans_factor
     pts[:, :3] += trans_factor
-
-    # 3. translation
-    # trans_factor = np.random.normal(scale=translation_std, size=(1, 3))
-    # pts[:, :3] += trans_factor
-    # label_pts[:, :3] += trans_factor
-
-    # std_z = translation_std[2]
-    # trans_factor_z = np.random.normal(scale=std_z)
-
-    # pts[:, 2] += trans_factor_z
-    # label_pts[:, 2] += trans_factor_z
 
     data_dict.update({'label_pts': label_pts})
     data_dict.update({'pts': pts})

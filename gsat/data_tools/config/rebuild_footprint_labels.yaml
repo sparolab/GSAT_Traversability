@@ -1,0 +1,21 @@
+rellis:
+  # split dataset with one label per robot pose (center line)
+  input_root: "/root/gsat_ws/src/GSAT_Traversability/collect_data/rellis/dataset_pose_r005_arfil0_sampling"
+  output_root: "/root/gsat_ws/src/GSAT_Traversability/collect_data/rellis/dataset_pose_r005_arfil0_sampling_fp"
+  splits: ["train", "val", "test"]
+  copy_point_dir: true
+
+  # Clearpath Warthog base footprint [x forward, y left] (m)
+  footprint_points:
+    - [0.67, 0.45]
+    - [0.67, -0.45]
+    - [-0.67, -0.45]
+    - [-0.67, 0.45]
+  footprint_sample_step_xy: [0.15, 0.15]
+
+  # BEV grid, must match voxel_size / point_range in gsat/config/train.yaml
+  cell_size_xy: [0.15, 0.15]
+  point_range_xy: [-12.0, -12.0, 12.0, 12.0]
+
+  # drop label cells closer than this to the sensor (m); the pose labels start at ~2.57 m
+  min_label_range: 2.5

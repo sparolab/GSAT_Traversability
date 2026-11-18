@@ -50,8 +50,8 @@ def split_dataset(points_dir, labels_dir, output_dir, train_ratio=0.7, val_ratio
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='./../data_tools/config/data_split.yaml')
-    parser.add_argument('--key', type=str, default='hill_example',
-                        help='top-level config key to use (e.g. hill_example)')
+    parser.add_argument('--key', type=str, default='gazebo_hill',
+                        help='top-level config key to use (e.g. gazebo_hill)')
     args = parser.parse_args()
 
     with open(args.config, 'r') as f:

@@ -22,7 +22,6 @@ class MLPAutoEncoder(nn.Module):
             encoder_layers.append(nn.Linear(prev_dim, h))
             encoder_layers.append(nn.BatchNorm1d(h))
             encoder_layers.append(nn.ReLU(inplace=False))
-            # encoder_layers.append(nn.LeakyReLU(inplace=False))
             encoder_layers.append(nn.Dropout(p=dropout_prob))
             prev_dim = h
         self.encoder = nn.Sequential(*encoder_layers)
@@ -38,7 +37,6 @@ class MLPAutoEncoder(nn.Module):
             decoder_layers.append(nn.Linear(prev_dim, h))
             decoder_layers.append(nn.BatchNorm1d(h))
             decoder_layers.append(nn.ReLU(inplace=False))
-            # decoder_layers.append(nn.LeakyReLU(inplace=False))
             decoder_layers.append(nn.Dropout(p=dropout_prob))
             prev_dim = h
         decoder_layers.append(nn.Linear(prev_dim, recon_out_dim))
@@ -65,7 +63,6 @@ class MLPAutoEncoder(nn.Module):
         latent_relu = self.act_bottleneck(latent_bn)
         latent_drop = self.drop_bottleneck(latent_relu)        
 
-        # reco = self.decoder(latent_relu)
         reco = self.decoder(latent_drop)
 
         recon_out = reco.view(B, H, W, -1).permute(0, 3, 1, 2)  # (B, input_dim, H, W)

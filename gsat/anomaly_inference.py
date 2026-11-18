@@ -17,8 +17,8 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _DEFAULT_CONFIG = os.path.join(_SCRIPT_DIR, "config", "infer_anomaly.yaml")
 
 # Visualization colors: Normal (1) / Anomaly (0)
-COLOR_NORMAL = np.array([0.0, 0.0, 1.0])   # Blue
-COLOR_ANOMALY = np.array([1.0, 0.0, 0.0])  # Red
+COLOR_NORMAL = np.array([0.0, 0.0, 1.0])
+COLOR_ANOMALY = np.array([1.0, 0.0, 0.0])
 
 
 def load_config(path: str) -> dict:
@@ -75,7 +75,6 @@ def load_model(ckpt_path: str, device: torch.device, point_range: list, voxel_si
 
 
 def _latent_anomaly_score(z_flat: torch.Tensor, center_c: torch.Tensor) -> torch.Tensor:
-    #--------[Compute per-pixel anomaly score]--------#
     c = center_c.reshape(1, -1).to(device=z_flat.device, dtype=z_flat.dtype)
     return torch.sqrt(torch.sum((z_flat - c) ** 2, dim=1).clamp(min=0.0) + 1e-6)
 
@@ -137,8 +136,6 @@ def infer_anomaly(bin_path: str, geo, head, center_c,
     return pred_map, dist_map, thr, points, H, W
 
 
-#--------[Open3D 3D Point Cloud Anomaly Detection Visualization]--------#
-# Mid (1-3 years experience)
 def visualize_open3d(pred_map: np.ndarray, title: str, points: np.ndarray,
                      point_range: list, voxel_size: list, show: bool = True,
                      point_size_ref: list | None = None) -> bool:
@@ -162,12 +159,10 @@ def visualize_open3d(pred_map: np.ndarray, title: str, points: np.ndarray,
     # Get prediction results for each point (1=normal, 0=anomaly)
     pts_preds = pred_map[gy_valid, gx_valid]
 
-    # Create color array
     colors = np.zeros((len(pts_valid), 3))
-    colors[pts_preds == 1] = COLOR_NORMAL   # Normal: Blue
-    colors[pts_preds == 0] = COLOR_ANOMALY  # Anomaly: Red
+    colors[pts_preds == 1] = COLOR_NORMAL
+    colors[pts_preds == 0] = COLOR_ANOMALY
 
-    # Create Open3D PointCloud object
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(pts_valid[:, :3])
     pcd.colors = o3d.utility.Vector3dVector(colors)
@@ -192,7 +187,6 @@ def visualize_open3d(pred_map: np.ndarray, title: str, points: np.ndarray,
         vis.close()
         return False
 
-    # Create VisualizerWithKeyCallback and configure window
     vis = o3d.visualization.VisualizerWithKeyCallback()
     vis.create_window(window_name=f"Open3D - {title} [Space: Next, Esc: Exit]", width=1280, height=720)
     vis.add_geometry(pcd)
@@ -202,11 +196,9 @@ def visualize_open3d(pred_map: np.ndarray, title: str, points: np.ndarray,
     if point_size_ref is not None:
         vis.get_render_option().point_size = point_size_ref[0]
 
-    # Register keyboard callbacks
     vis.register_key_callback(32, next_callback)   # Space
     vis.register_key_callback(256, exit_callback)  # Escape
 
-    # Run visualizer
     vis.run()
     vis.destroy_window()
 

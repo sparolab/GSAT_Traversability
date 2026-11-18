@@ -1,0 +1,20 @@
+# Checkpoint saved by train.py (can also be given with --checkpoint)
+checkpoint_path: "/root/gsat_ws/src/GSAT_Traversability/collect_data/rellis/checkpoint/best_model_XX.pth"
+# Folder of semantic .ply files used as ground truth
+sem_folder: "/root/gsat_ws/src/GSAT_Traversability/collect_data/rellis/semi_gt/change_manual_real"
+
+# Must match train.yaml
+point_range: [-12, -12, -2, 12, 12, 2]
+voxel_size: [0.15, 0.15, 4]
+# Semantic label ids counted as traversable
+traversable_ids: [1]
+
+# false -> skip the metrics and only visualize
+show_metrics: true
+
+# Visualize each file (after the metrics if show_metrics is true)
+visualize_bev: false
+visualize_3d: false
+
+# null -> cuda if available, else cpu
+device: null
