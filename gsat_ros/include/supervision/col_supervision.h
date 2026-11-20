@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <geometry_msgs/Twist.h>
+#include <geometry_msgs/msg/twist.hpp>
 
 struct Pose {
     double x;

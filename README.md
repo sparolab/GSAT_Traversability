@@ -69,6 +69,10 @@ python3 setup.py build_ext --inplace
 
 ### 1. Data Collection (ROS)
 
+> On branch `ros2` the collector is a ROS 2 Jazzy package: `colcon build --packages-select gsat_ros`, then
+> `ros2 launch gsat_ros data_collection.launch.py` (see [`gsat_ros/README.md`](gsat_ros/README.md)).
+> Training and evaluation below do not use ROS and are unchanged.
+
 See [`gsat_ros/README.md`](gsat_ros/README.md) for topic configuration and output format.
 
 ```bash
