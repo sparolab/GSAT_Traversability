@@ -1,19 +1,21 @@
 // Data_collection_node
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include <supervision/col_supervision.h>
 #include <supervision/convert_pseudo_label.h>
 
-#include <sensor_msgs/PointCloud2.h>
-#include <nav_msgs/Odometry.h>
-#include <geometry_msgs/Twist.h>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <geometry_msgs/msg/twist.hpp>
 
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <cmath>
 #include <filesystem>
@@ -21,36 +23,36 @@
 #include <memory>
 #include <string>
 
-#include <sensor_msgs/point_cloud2_iterator.h>
+#include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <iomanip>
 #include <sstream>
 
-class Data_generate
+class Data_generate : public rclcpp::Node
 {
 public:
   using ApproxPolicy = message_filters::sync_policies::ApproximateTime<
-      sensor_msgs::PointCloud2, nav_msgs::Odometry>;
+      sensor_msgs::msg::PointCloud2, nav_msgs::msg::Odometry>;
 
-  Data_generate(ros::NodeHandle& nh, ros::NodeHandle& pnh)
-    : nh_(nh), pnh_(pnh)
+  Data_generate()
+    : Node("data_collection_node")
   {
-    std::string dataset_name;
-    pnh_.param("dataset_name", dataset_name, std::string("gazebo_hill"));
-    const std::string prefix = dataset_name + "/";
+    // ROS 1 read "<dataset_name>/<key>" from the private namespace; here the YAML nests the same keys under
+    // the dataset name, which ROS 2 flattens to "<dataset_name>.<key>".
+    const std::string dataset_name = declare_parameter<std::string>("dataset_name", "gazebo_hill");
+    const std::string prefix = dataset_name + ".";
 
-    pnh_.param(prefix + "output_dir", output_dir_,
-               std::string("/root/gsat_ws/src/collect_data/gazebo/hill/original"));
-    pnh_.param(prefix + "sampling_time", sampling_time_, 0.3);
-    pnh_.param(prefix + "queue_size", queue_size_, 10);
-    pnh_.param(prefix + "max_interval_sec", max_interval_sec_, 0.02);
-    pnh_.param(prefix + "use_pseudo_label", use_pseudo_label_, true);
-    pnh_.param(prefix + "eta", eta_, 20.0);
-    pnh_.param(prefix + "v_th", v_th_, 0.05);
+    output_dir_       = declare_parameter<std::string>(prefix + "output_dir",
+                                                       "/root/gsat_ws/src/collect_data/gazebo/hill/original");
+    sampling_time_    = declare_parameter<double>(prefix + "sampling_time", 0.3);
+    queue_size_       = declare_parameter<int>(prefix + "queue_size", 10);
+    max_interval_sec_ = declare_parameter<double>(prefix + "max_interval_sec", 0.02);
+    use_pseudo_label_ = declare_parameter<bool>(prefix + "use_pseudo_label", true);
+    eta_              = declare_parameter<double>(prefix + "eta", 20.0);
+    v_th_             = declare_parameter<double>(prefix + "v_th", 0.05);
 
-    std::string lidar_topic, odom_topic, cmd_vel_topic;
-    pnh_.param(prefix + "lidar_topic", lidar_topic, std::string("filter/points"));
-    pnh_.param(prefix + "odom_topic", odom_topic, std::string("filter/odom"));
-    pnh_.param(prefix + "cmd_vel_topic", cmd_vel_topic, std::string("cmd_vel"));
+    const std::string lidar_topic   = declare_parameter<std::string>(prefix + "lidar_topic", "filter/points");
+    const std::string odom_topic    = declare_parameter<std::string>(prefix + "odom_topic", "filter/odom");
+    const std::string cmd_vel_topic = declare_parameter<std::string>(prefix + "cmd_vel_topic", "cmd_vel");
 
     lidar_dir_ = output_dir_ + "/lidar";
     csv_path_  = output_dir_ + "/supervision.csv";
@@ -77,24 +79,27 @@ public:
          << "Travel_label\n";
     csv_.flush();
 
-    ROS_INFO_STREAM("Dataset: " << dataset_name);
-    ROS_INFO_STREAM("Output dir: " << output_dir_);
-    ROS_INFO_STREAM("CSV path  : " << csv_path_);
-    ROS_INFO_STREAM("Sampling  : " << sampling_time_ << " sec");
-    ROS_INFO_STREAM("Use pseudo label: " << (use_pseudo_label_ ? "true" : "false (Travel_label=1)"));
+    RCLCPP_INFO_STREAM(get_logger(), "Dataset: " << dataset_name);
+    RCLCPP_INFO_STREAM(get_logger(), "Output dir: " << output_dir_);
+    RCLCPP_INFO_STREAM(get_logger(), "CSV path  : " << csv_path_);
+    RCLCPP_INFO_STREAM(get_logger(), "Sampling  : " << sampling_time_ << " sec");
+    RCLCPP_INFO_STREAM(get_logger(), "Use pseudo label: " << (use_pseudo_label_ ? "true" : "false (Travel_label=1)"));
     if (use_pseudo_label_)
-      ROS_INFO_STREAM("Label eta: " << eta_ << ", v_th: " << v_th_);
-    ROS_INFO_STREAM("Topics    : " << lidar_topic << ", " << odom_topic << ", " << cmd_vel_topic);
+      RCLCPP_INFO_STREAM(get_logger(), "Label eta: " << eta_ << ", v_th: " << v_th_);
+    RCLCPP_INFO_STREAM(get_logger(), "Topics    : " << lidar_topic << ", " << odom_topic << ", " << cmd_vel_topic);
 
-    lidar_sub_.reset(new message_filters::Subscriber<sensor_msgs::PointCloud2>(nh_, lidar_topic, 1));
-    odom_sub_.reset(new message_filters::Subscriber<nav_msgs::Odometry>(nh_, odom_topic, 1));
-    cmd_sub_ = nh_.subscribe(cmd_vel_topic, 10, &Data_generate::cmdCallback, this);
+    lidar_sub_ = std::make_shared<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>>(
+        this, lidar_topic, rclcpp::SensorDataQoS().get_rmw_qos_profile());
+    odom_sub_ = std::make_shared<message_filters::Subscriber<nav_msgs::msg::Odometry>>(this, odom_topic);
+    cmd_sub_ = create_subscription<geometry_msgs::msg::Twist>(
+        cmd_vel_topic, 10, std::bind(&Data_generate::cmdCallback, this, std::placeholders::_1));
 
-    sync_.reset(new message_filters::Synchronizer<ApproxPolicy>(
-        ApproxPolicy(queue_size_), *lidar_sub_, *odom_sub_));
+    sync_ = std::make_shared<message_filters::Synchronizer<ApproxPolicy>>(
+        ApproxPolicy(queue_size_), *lidar_sub_, *odom_sub_);
 
-    sync_->setMaxIntervalDuration(ros::Duration(max_interval_sec_));
-    sync_->registerCallback(boost::bind(&Data_generate::generate_callback, this, _1, _2));
+    sync_->setMaxIntervalDuration(rclcpp::Duration::from_seconds(max_interval_sec_));
+    sync_->registerCallback(std::bind(&Data_generate::generate_callback, this,
+                                      std::placeholders::_1, std::placeholders::_2));
   }
 
   ~Data_generate()
@@ -104,7 +109,7 @@ public:
   }
 
 private:
-  Pose convert_odom(const nav_msgs::OdometryConstPtr& odom)
+  Pose convert_odom(const nav_msgs::msg::Odometry::ConstSharedPtr& odom)
   {
     Pose p;
     p.x = odom->pose.pose.position.x;
@@ -117,7 +122,7 @@ private:
     return p;
   }
 
-  bool saveCloudBinXYI(const sensor_msgs::PointCloud2ConstPtr& cloud,
+  bool saveCloudBinXYI(const sensor_msgs::msg::PointCloud2::ConstSharedPtr& cloud,
                       const std::string& bin_path)
   {
     if (!cloud || cloud->width * cloud->height == 0) return false;
@@ -131,7 +136,7 @@ private:
 
     std::ofstream out(bin_path, std::ios::binary);
     if (!out.is_open()) {
-      ROS_ERROR_STREAM("Failed to open bin: " << bin_path);
+      RCLCPP_ERROR_STREAM(get_logger(), "Failed to open bin: " << bin_path);
       return false;
     }
     sensor_msgs::PointCloud2ConstIterator<float> it_x(*cloud, "x");
@@ -156,18 +161,18 @@ private:
   }
 
 
-  void cmdCallback(const geometry_msgs::TwistConstPtr& msg)
+  void cmdCallback(const geometry_msgs::msg::Twist::ConstSharedPtr& msg)
   {
     command_vel_ = *msg;  // latest command
   }
 
-  void generate_callback(const sensor_msgs::PointCloud2ConstPtr& cloud,
-                         const nav_msgs::OdometryConstPtr& odom)
+  void generate_callback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr& cloud,
+                         const nav_msgs::msg::Odometry::ConstSharedPtr& odom)
   {
     if (!csv_.is_open())
       return;
 
-    ros::Time now = ros::Time::now();
+    rclcpp::Time now = this->now();
     cur_pose_ = convert_odom(odom);
 
     if (!initialized_)
@@ -178,7 +183,7 @@ private:
       return;  // first frame: no dt
     }
 
-    double dt = (now - last_time_).toSec();
+    double dt = (now - last_time_).seconds();
     if (dt < sampling_time_)
       return;
 
@@ -192,7 +197,7 @@ private:
         : 1.0;
 
     const uint32_t sec  = odom->header.stamp.sec;
-    const uint32_t nsec = odom->header.stamp.nsec;
+    const uint32_t nsec = odom->header.stamp.nanosec;
     
     uint64_t timestamp = sec * 1000000000ULL + nsec;
 
@@ -211,12 +216,12 @@ private:
          << "\n";
     csv_.flush();
 
-    ROS_INFO_STREAM("dt=" << dt << " Travel_label=" << travel_label);
+    RCLCPP_INFO_STREAM(get_logger(), "dt=" << dt << " Travel_label=" << travel_label);
 
     std::string bin_path = lidar_dir_ + "/" + std::to_string(timestamp) + ".bin";
 
     if (!saveCloudBinXYI(cloud, bin_path)) {
-      ROS_WARN_STREAM("Failed to save cloud bin: " << bin_path);
+      RCLCPP_WARN_STREAM(get_logger(), "Failed to save cloud bin: " << bin_path);
 
     }
     last_time_ = now;
@@ -224,11 +229,9 @@ private:
   }
 
 private:
-  ros::NodeHandle nh_, pnh_;
-
-  std::shared_ptr<message_filters::Subscriber<sensor_msgs::PointCloud2>> lidar_sub_;
-  std::shared_ptr<message_filters::Subscriber<nav_msgs::Odometry>> odom_sub_;
-  ros::Subscriber cmd_sub_;
+  std::shared_ptr<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>> lidar_sub_;
+  std::shared_ptr<message_filters::Subscriber<nav_msgs::msg::Odometry>> odom_sub_;
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_sub_;
 
   std::shared_ptr<message_filters::Synchronizer<ApproxPolicy>> sync_;
 
@@ -237,8 +240,8 @@ private:
   std::string csv_path_;
 
   Pose pre_pose_, cur_pose_;
-  geometry_msgs::Twist command_vel_;
-  ros::Time last_time_;
+  geometry_msgs::msg::Twist command_vel_;
+  rclcpp::Time last_time_;
   bool initialized_{false};
 
   // params
@@ -254,11 +257,8 @@ private:
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "data_collection_node");
-  ros::NodeHandle nh;
-  ros::NodeHandle pnh("~");
-
-  Data_generate node(nh, pnh);
-  ros::spin();
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<Data_generate>());
+  rclcpp::shutdown();
   return 0;
 }

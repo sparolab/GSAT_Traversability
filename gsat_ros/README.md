@@ -1,4 +1,10 @@
-# GSAT ROS — Dataset Collection
+# GSAT ROS — Dataset Collection (ROS 2 Jazzy)
+
+> Branch `ros2`: ROS 2 Jazzy port of the ROS 1 collector on `master`. Same nodes, labels and output format.
+> Build with colcon in a ROS 2 workspace:
+> ```bash
+> cd ~/gsat_ws && colcon build --packages-select gsat_ros && source install/setup.bash
+> ```
 
 Collect synchronized **perspective LiDAR** scans and **supervision** (pose + traversability pseudo-label) for self-supervised training.
 
@@ -51,9 +57,12 @@ Binary point cloud: each point is **4 × float32** — `x, y, z, intensity` (int
 
 `data_collection.launch` also starts `sw_sync`, which time-syncs raw LiDAR + odometry and republishes `filter/points` and `filter/odom`. Use it when your bag does not already provide those topics.
 
-Change input topics in `src/sw_sync.cpp` (`lidar_sub_`, `odom_sub_`).
+Input topics are parameters of `data_sw_sync` (`lidar_topic`, default `/os1_cloud_node/points`; `odom_topic`, default `/gt_odom`) in `config/data_collection.yaml`.
 
 ## Configuration (`config/data_collection.yaml`)
+
+ROS 2 parameters live under each node's `ros__parameters`; the dataset block nested under the dataset name becomes
+`<dataset_name>.<key>` parameters of `data_collection_node`. The ROS 1 layout is shown below for reference.
 
 ```yaml
 dataset_name: "gazebo_hill"
