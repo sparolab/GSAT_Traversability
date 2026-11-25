@@ -1,15 +1,12 @@
 // transform_utils.cpp
 #include "transform/transform_utils.h"
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl/common/transforms.h>
-#include <pcl/PCLPointCloud2.h>
 
-#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
-#include <geometry_msgs/TransformStamped.h>
+#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
 
 namespace transform
 {
-    Eigen::Isometry3d odomToIsometry(const nav_msgs::Odometry& odom)
+    Eigen::Isometry3d odomToIsometry(const nav_msgs::msg::Odometry& odom)
     {
         Eigen::Isometry3d T = Eigen::Isometry3d::Identity();
 
@@ -29,11 +26,11 @@ namespace transform
     }
 
 
-    sensor_msgs::PointCloud2 transformCloudTF2(const sensor_msgs::PointCloud2& cloud,
-                                            const Eigen::Isometry3d& T,
-                                            const std::string& target_frame)
+    sensor_msgs::msg::PointCloud2 transformCloudTF2(const sensor_msgs::msg::PointCloud2& cloud,
+                                                    const Eigen::Isometry3d& T,
+                                                    const std::string& target_frame)
     {
-        geometry_msgs::TransformStamped tf;
+        geometry_msgs::msg::TransformStamped tf;
         tf.header.stamp = cloud.header.stamp;
         tf.header.frame_id = target_frame;
         tf.child_frame_id = cloud.header.frame_id;
@@ -49,7 +46,7 @@ namespace transform
         tf.transform.rotation.z = q.z();
         tf.transform.rotation.w = q.w();
 
-        sensor_msgs::PointCloud2 out;
+        sensor_msgs::msg::PointCloud2 out;
         tf2::doTransform(cloud, out, tf);
         out.header.frame_id = target_frame;
         return out;
